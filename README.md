@@ -1,26 +1,26 @@
 # 3DTilesViewer
 
-这是一个基于 React 和 Cesium 的简单应用程序，允许用户在浏览器中上传并查看本地的 3D Tiles 数据。
+This is a simple **web application** built with React and Cesium, allowing users to upload and visualize local 3D Tiles data directly in their browser.
 
-链接：[3DTilesViewer](https://ni1o1.github.io/3DTilesViewer/)
-
-## 🚀 功能特性
-
-* **本地 3D Tiles 上传**: 用户可以通过拖拽或点击选择本地的 3D Tiles 文件夹，应用会自动解析并加载 `tileset.json` 文件及其关联资源。
-* **多语言支持**: 界面支持中英文双语显示，并根据浏览器语言自动切换。
-* **瓦片集管理**:
-    * **定位**: 点击按钮可将视角快速定位到已加载的 3D Tiles 瓦片集。
-    * **显示/隐藏**: 独立控制每个已加载瓦片集的可见性。
-    * **移除**: 从场景中删除不需要的瓦片集并释放资源。
-* **3D Tiles 信息**: 提供一个可切换显示/隐藏的介绍，解释什么是 3D Tiles 及其 OGC 官方标准链接。
-* **错误处理**: 提供上传和加载过程中的错误提示。
+Link: [3DTilesViewer](https://ni1o1.github.io/3DTilesViewer/)
 
 ---
 
-## 🛠️ 技术栈
+## 🚀 Features
 
-* **React**: 用于构建用户界面的 JavaScript 库。
-* **CesiumJS**: 强大的开源地理空间数据可视化库，用于渲染 3D 地球和瓦片集。
-* **Ant Design**: 高质量的 React UI 组件库，用于构建美观且响应式的用户界面（如浮动面板、按钮、列表等）。
+* **Local 3D Tiles Upload**: Users can drag and drop or click to select a local 3D Tiles folder. The application automatically parses and loads the `tileset.json` file and its associated resources.
+* **Multi-language Support**: The user interface supports both Chinese and English, automatically switching based on the browser's language settings.
+* **Tileset Management**:
+    * **Fly To**: Quickly navigate the camera to the extent of a loaded 3D Tileset.
+    * **Show/Hide**: Individually control the visibility of each loaded tileset.
+    * **Remove**: Delete unwanted tilesets from the scene and release associated resources.
+* **3D Tiles Information**: Provides a toggleable section explaining what 3D Tiles are, including a link to the official OGC standard.
+* **Error Handling**: Offers clear error messages during the upload and loading processes.
 
 ---
+
+## 🛠️ Tech Stack
+
+* **React**: A JavaScript library for building user interfaces.
+* **CesiumJS**: A powerful open-source geospatial visualization library for rendering a 3D globe and tilesets.
+* **Ant Design**: A high-quality React UI component library used for building a clean and responsive user interface (e.g., floating panel, buttons, lists).
