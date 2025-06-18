@@ -1,0 +1,47 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.cesium-viewer-toolbar {
+  top: auto;
+  left: auto;
+  right: 48px;
+  bottom: 48px;
+  width: 42px;
+  height: auto;
+}
+
+.cesium-viewer-fullscreenContainer .cesium-viewer-toolbar {
+  right: 48px;
+  bottom: 48px;
+}
+
+.cesium-viewer-animationContainer {
+  position: absolute;
+  top: auto;
+  left: 48px;
+  bottom: 48px;
+  width: 169px;
+  height: 112px;
+}
+
+.cesium-viewer-timelineContainer {
+  position: absolute;
+  top: auto;
+  bottom: 48px;
+  left: 235px;
+  right: 109px;
+  height: 42px;
+}

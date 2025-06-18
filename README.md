@@ -4,6 +4,8 @@ This is a simple **web application** built with React and Cesium, allowing users
 
 Link: [3DTilesViewer](https://ni1o1.github.io/3DTilesViewer/)
 
+![3DTilesViewer](./3DTilesViewer.png)
+
 ---
 
 ## 🚀 Features
