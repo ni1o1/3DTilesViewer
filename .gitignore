@@ -1,0 +1,10 @@
+# 忽略所有文件和文件夹
+*
+
+# 但保留以下文件和文件夹
+!README.md
+!docs/
+!docs/**
+
+# 保留.gitignore文件本身
+!.gitignore
