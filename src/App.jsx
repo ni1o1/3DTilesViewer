@@ -14,6 +14,8 @@ function App() {
   const [shadowsEnabled, setShadowsEnabled] = useState(true);
   // 管理3D Tiles类型状态
   const [tilesType, setTilesType] = useState('normal'); // 'normal' 或 'solar'
+  // 管理底图类型状态
+  const [baseMapType, setBaseMapType] = useState('satellite');
   // 管理Cesium viewer实例
   const [viewer, setViewer] = useState(null);
 
@@ -39,6 +41,11 @@ function App() {
     }
   };
 
+  // 处理底图类型切换
+  const handleBaseMapChange = (type) => {
+    setBaseMapType(type);
+  };
+
   // 处理viewer准备就绪
   const handleViewerReady = (viewerRef) => {
     setViewer(viewerRef);
@@ -51,7 +58,10 @@ function App() {
 
   return (
     <Layout className="app-layout">
-      <AppHeader />
+      <AppHeader 
+        baseMapType={baseMapType}
+        onBaseMapChange={handleBaseMapChange}
+      />
       <Content className="app-content">
         <CesiumViewer 
           currentTime={currentTime}
@@ -59,6 +69,7 @@ function App() {
           shadowsEnabled={shadowsEnabled}
           onShadowsChange={handleShadowsChange}
           tilesType={tilesType}
+          baseMapType={baseMapType}
           onViewerReady={handleViewerReady}
         />
         <FloatingPanel 

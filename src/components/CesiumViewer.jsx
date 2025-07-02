@@ -2,10 +2,10 @@ import React, { useRef, useEffect } from 'react';
 import * as Cesium from 'cesium';
 import { message } from 'antd';
 
-// 设置Cesium的默认访问令牌（如果需要）
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2MjFjMThmZC03MjEzLTQzZTctYWM3Ny1iZTdiMTdjOTBmMmUiLCJpZCI6MTU2MjcwLCJpYXQiOjE3NTE0NTAzNjV9.p53JdDijMD3hFfypyhe8ysowC-JETMwFVH87SW7ukG4';
+// 设置Cesium的默认访问令牌（从环境变量读取）
+Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_ACCESS_TOKEN
 
-function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShadowsChange, tilesType = 'normal', onViewerReady }) {
+function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShadowsChange, tilesType = 'normal', baseMapType = 'satellite', onViewerReady }) {
   const cesiumContainer = useRef(null);
   const viewer = useRef(null);
 
@@ -16,6 +16,7 @@ function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShad
     try {
       // 创建Cesium viewer
       viewer.current = new Cesium.Viewer(cesiumContainer.current, {
+        imageryProvider: false, // 禁止默认的Bing Maps
         terrainProvider: new Cesium.EllipsoidTerrainProvider(),
         timeline: false,
         animation: false,
@@ -53,6 +54,9 @@ function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShad
         viewer.current.clock.shouldAnimate = false;
       }
       
+      // 设置初始底图
+      changeBaseMap(baseMapType);
+      
       // 通知父组件viewer已准备就绪
       if (onViewerReady) {
         onViewerReady(viewer);
@@ -71,6 +75,52 @@ function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShad
       }
     };
   }, []);
+
+  // 底图切换函数
+  const changeBaseMap = async (mapType) => {
+    if (!viewer.current) return;
+
+    const imageryLayers = viewer.current.imageryLayers;
+    imageryLayers.removeAll();
+
+    let imageryProvider;
+    
+    switch (mapType) {
+      case 'satellite':
+        imageryProvider = await Cesium.createWorldImageryAsync();
+        break;
+      case 'osm':
+        imageryProvider = new Cesium.OpenStreetMapImageryProvider({
+          url: 'https://a.tile.openstreetmap.org/'
+        });
+        break;
+      case 'dark':
+        imageryProvider = new Cesium.UrlTemplateImageryProvider({
+          url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png',
+          subdomains: ['a', 'b', 'c', 'd']
+        });
+        break;
+      case 'light':
+        imageryProvider = new Cesium.UrlTemplateImageryProvider({
+          url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+          subdomains: ['a', 'b', 'c', 'd']
+        });
+        break;
+      default:
+        imageryProvider = await Cesium.createWorldImageryAsync();
+    }
+
+    if (imageryProvider) {
+      imageryLayers.addImageryProvider(imageryProvider);
+    }
+  };
+
+  // 监听底图类型变化
+  useEffect(() => {
+    if (viewer.current) {
+      changeBaseMap(baseMapType);
+    }
+  }, [baseMapType]);
 
 
   return (
