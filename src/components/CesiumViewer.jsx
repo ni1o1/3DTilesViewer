@@ -3,7 +3,7 @@ import * as Cesium from 'cesium';
 import { message } from 'antd';
 
 // 设置Cesium的默认访问令牌（如果需要）
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjYzQwMDM4Yy0wMjYxLTRlOGItYWQ3Yy1lMmJjMDQ4YWU3OTgiLCJpZCI6MTU2MjcwLCJpYXQiOjE2OTAyNzE1OTd9.m4IRhauIC9fHW6tY0YB5FnB_6CJqbvvPr9MmiPNwoO0';
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2MjFjMThmZC03MjEzLTQzZTctYWM3Ny1iZTdiMTdjOTBmMmUiLCJpZCI6MTU2MjcwLCJpYXQiOjE3NTE0NTAzNjV9.p53JdDijMD3hFfypyhe8ysowC-JETMwFVH87SW7ukG4';
 
 function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShadowsChange, tilesType = 'normal', onViewerReady }) {
   const cesiumContainer = useRef(null);
