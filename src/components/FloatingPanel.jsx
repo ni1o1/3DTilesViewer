@@ -237,6 +237,7 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
       });
 
       const primitive = viewer.current.scene.primitives.add(tileset);
+
       await viewer.current.zoomTo(tileset);
 
       const newTileset = {
