@@ -8,12 +8,14 @@ import {
   EnvironmentOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
-  QuestionCircleOutlined // 新增图标用于信息提示
+  CaretDownOutlined,
+  CaretUpOutlined
 } from '@ant-design/icons';
 import * as Cesium from 'cesium';
+import  { GLBAnalyzer, GLBInfoInline } from './GLBAnalyzer.jsx';
 
 const { Dragger } = Upload;
-const { Title, Text, Paragraph } = Typography;
+const {  Text, Paragraph } = Typography;
 
 // 国际化文本常量
 const messages = {
@@ -68,9 +70,10 @@ const messages = {
 function FloatingPanel({ viewer, onTilesetLoad }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [uploadedTilesets, setUploadedTilesets] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [tilesetVisibility, setTilesetVisibility] = useState({});
-  const [showTilesetInfo, setShowTilesetInfo] = useState(false); // 控制信息显示
+  const [glbAnalysisData, setGlbAnalysisData] = useState({}); // 存储GLB分析数据
+  const [expandedGlbInfo, setExpandedGlbInfo] = useState({}); // 新增：控制GLB信息展开状态
+  const [hoveredTileset, setHoveredTileset] = useState(null);
   const processedFileUIDs = useRef(new Set());
   const [lang, setLang] = useState('en'); // 默认语言
 
@@ -92,13 +95,64 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
     return message;
   };
 
+  // 格式化文件大小
+  const formatBytes = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+
+  // 分析GLB文件
+  const analyzeGLBFiles = async (fileList, tilesetId) => {
+    const glbFiles = fileList.filter(file => 
+      file.name.toLowerCase().endsWith('.glb') || 
+      file.name.toLowerCase().endsWith('.gltf')
+    );
+
+    if (glbFiles.length > 0) {
+      console.log(`Found ${glbFiles.length} GLB/glTF files, analyzing...`);
+      
+      try {
+        // 分析第一个GLB/glTF文件作为代表
+        const firstGlbFile = glbFiles[0];
+        const fileObj = firstGlbFile.originFileObj || firstGlbFile;
+        
+        let analysisResult;
+        
+        if (firstGlbFile.name.toLowerCase().endsWith('.glb')) {
+          // 处理GLB文件
+          const arrayBuffer = await fileObj.arrayBuffer();
+          analysisResult = await GLBAnalyzer.analyzeGLB(arrayBuffer);
+        } else {
+          // 处理glTF文件
+          const text = await fileObj.text();
+          analysisResult = await GLBAnalyzer.analyzeGLTF(text);
+        }
+        
+        setGlbAnalysisData(prev => ({
+          ...prev,
+          [tilesetId]: {
+            ...analysisResult,
+            fileName: firstGlbFile.name,
+            fileType: firstGlbFile.name.toLowerCase().endsWith('.glb') ? 'GLB' : 'glTF',
+            totalFiles: glbFiles.length
+          }
+        }));
+        
+        message.success(`检测到 ${glbFiles.length} 个GLB/glTF文件，已自动分析 ${firstGlbFile.name}`);
+      } catch (error) {
+        console.error('GLB analysis failed:', error);
+        message.warning(`GLB文件分析失败: ${error.message}，但3D Tiles加载成功`);
+      }
+    }
+  };
+
   const handleUpload = async (info) => {
     const { fileList } = info;
-    if (fileList.some(f => f.status === 'uploading')) {
-      setLoading(true);
-    } else {
-      setLoading(false);
-    }
+
     const allFinished = fileList.every(f => f.status === 'done' || f.status === 'error');
     if (allFinished) {
       const newSuccessfulFiles = fileList.filter(f =>
@@ -240,17 +294,28 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
 
       await viewer.current.zoomTo(tileset);
 
+      // 计算总文件大小
+      let totalSize = 0;
+      allFiles.forEach(file => {
+        const fileObj = file.originFileObj || file;
+        totalSize += fileObj.size || 0;
+      });
+
       const newTileset = {
         id: Date.now().toString(),
         name: folderName,
         primitive: primitive,
         generatedUrls: allGeneratedUrls,
-        fileCount: allFiles.length
+        fileCount: allFiles.length,
+        totalSize: totalSize
       };
 
       setUploadedTilesets(prev => [...prev, newTileset]);
       setTilesetVisibility(prev => ({ ...prev, [newTileset.id]: true }));
       message.success(t('loadSuccess', newTileset.name));
+
+      // 分析GLB文件
+      await analyzeGLBFiles(allFiles, newTileset.id);
 
       if (onTilesetLoad) {
         onTilesetLoad(newTileset);
@@ -279,6 +344,21 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
       delete newVisibility[tilesetId];
       return newVisibility;
     });
+    
+    // 清理GLB分析数据
+    setGlbAnalysisData(prev => {
+      const newData = { ...prev };
+      delete newData[tilesetId];
+      return newData;
+    });
+    
+    // 清理GLB信息展开状态
+    setExpandedGlbInfo(prev => {
+      const newState = { ...prev };
+      delete newState[tilesetId];
+      return newState;
+    });
+    
     message.success(t('tilesetRemoved'));
   };
 
@@ -296,6 +376,14 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
       tileset.primitive.show = isVisible;
       setTilesetVisibility(prev => ({ ...prev, [tilesetId]: isVisible }));
     }
+  };
+
+  // 新增：切换GLB信息展开状态
+  const toggleGlbInfo = (tilesetId) => {
+    setExpandedGlbInfo(prev => ({
+      ...prev,
+      [tilesetId]: !prev[tilesetId]
+    }));
   };
 
   const uploadProps = {
@@ -316,12 +404,16 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
         top: '20px',
         left: '20px',
         width: isCollapsed ? '280px' : '520px',
+        maxHeight: 'calc(100vh - 40px)', // 限制最大高度
         background: '#fffffff2',
         backdropFilter: 'blur(10px)',
         borderRadius: '8px',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08)',
         zIndex: 1000,
-        transition: 'all 0.3s ease-in-out'
+        transition: 'all 0.3s ease-in-out',
+        overflow: 'hidden', // 隐藏外部溢出
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       <Card
@@ -329,7 +421,6 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Space>
               <span>{t('panelTitle')}</span>
-
             </Space>
             <Button
               type="text"
@@ -342,57 +433,137 @@ function FloatingPanel({ viewer, onTilesetLoad }) {
           </div>
         }
         size="small"
-        style={{ border: 'none' }}
+        style={{ border: 'none', flex: 1, display: 'flex', flexDirection: 'column' }}
+        styles={{ 
+          body: { 
+            flex: 1, 
+            overflow: 'auto', // 允许内容滚动
+            maxHeight: isCollapsed ? '0' : 'calc(100vh - 120px)',
+            padding: isCollapsed ? '0' : '16px'
+          }
+        }}
       >
         {!isCollapsed && (
           <div>
-            <Dragger {...uploadProps} style={{ marginBottom: '16px' }}>
-              <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-              <p className="ant-upload-text">{t('uploadDragText')}</p>
-              <p className="ant-upload-hint">{t('uploadHint')}</p>
+            <Dragger 
+              {...uploadProps} 
+              style={{ 
+                marginBottom: '16px',
+                ...(uploadedTilesets.length > 0 && {
+                  minHeight: '60px',
+                  padding: '8px'
+                })
+              }}
+            >
+              {uploadedTilesets.length > 0 ? (
+                // 已有数据时的简化显示
+                <div style={{ textAlign: 'center' }}>
+                  <InboxOutlined style={{ fontSize: '16px', color: '#999' }} />
+                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#666' }}>
+                    {t('uploadDragText')}
+                  </span>
+                </div>
+              ) : (
+                // 无数据时的完整显示
+                <>
+                  <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+                  <p className="ant-upload-text">{t('uploadDragText')}</p>
+                  <p className="ant-upload-hint">{t('uploadHint')}</p>
+                </>
+              )}
             </Dragger>
-
-
 
             {uploadedTilesets.length > 0 && (
               <div>
                 <Divider></Divider>
-                <Paragraph type="secondary" style={{ margin: '16px 0 8px 0' }}><Text strong>{t('loadedTilesetsTitle')} ({uploadedTilesets.length}):</Text></Paragraph>
+                <Paragraph type="secondary" style={{ margin: '16px 0 8px 0' }}>
+                  <Text strong>{t('loadedTilesetsTitle')} ({uploadedTilesets.length}):</Text>
+                </Paragraph>
                 <List
                   size="small"
                   dataSource={uploadedTilesets}
                   renderItem={(tileset) => (
-                    <List.Item
-                      style={{
-                        padding: '8px 12px',
-                        border: '1px solid #f0f0f0',
-                        borderRadius: '4px',
-                        marginBottom: '4px',
-                        background: '#fafafa'
-                      }}
-                      actions={[
-                        <Button type="text" size="small" icon={<EnvironmentOutlined />} onClick={() => flyToTileset(tileset.id)} title={t('flyTo')} />,
-                        <Button type="text" size="small" icon={tilesetVisibility[tileset.id] ? <EyeOutlined /> : <EyeInvisibleOutlined />} onClick={() => toggleTilesetVisibility(tileset.id)} title={tilesetVisibility[tileset.id] ? t('hide') : t('show')} />,
-                        <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => removeTileset(tileset.id)} title={t('remove')} />
-                      ]}
-                    >
-                      <List.Item.Meta
-                        title={<Text strong style={{ fontSize: '13px' }}>{tileset.name}</Text>}
-                        description={<Text type="secondary" style={{ fontSize: '11px' }}>{tileset.fileCount} {t('files')}</Text>}
-                      />
-                    </List.Item>
+                    <div key={tileset.id}>
+                      <List.Item
+                        style={{
+                          padding: '8px 12px',
+                          border: '1px solid #f0f0f0',
+                          borderRadius: expandedGlbInfo[tileset.id] ? '4px 4px 0 0' : '4px',
+                          marginBottom: expandedGlbInfo[tileset.id] ? '0' : '4px',
+                          background: hoveredTileset === tileset.id ? '#f0f8ff' : '#fafafa',
+                          transition: 'background-color 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={() => setHoveredTileset(tileset.id)}
+                        onMouseLeave={() => setHoveredTileset(null)}
+                        actions={[
+                                                    hoveredTileset === tileset.id && (
+                            <Button 
+                              type="text" 
+                              size="small" 
+                              danger 
+                              icon={<DeleteOutlined />} 
+                              onClick={() => removeTileset(tileset.id)} 
+                              title={t('remove')}
+                              style={{ opacity: hoveredTileset === tileset.id ? 1 : 0, transition: 'opacity 0.2s ease' }}
+                            />
+                          ),
+                          <Button type="text" size="small" icon={<EnvironmentOutlined />} onClick={() => flyToTileset(tileset.id)} title={t('flyTo')} />,
+                          <Button type="text" size="small" icon={tilesetVisibility[tileset.id] ? <EyeOutlined /> : <EyeInvisibleOutlined />} onClick={() => toggleTilesetVisibility(tileset.id)} title={tilesetVisibility[tileset.id] ? t('hide') : t('show')} />,
+
+                          glbAnalysisData[tileset.id] && (
+                            <Button 
+                              type="text" 
+                              size="small" 
+                              icon={expandedGlbInfo[tileset.id] ? <CaretUpOutlined /> : <CaretDownOutlined />} 
+                              onClick={() => toggleGlbInfo(tileset.id)} 
+                              title="GLB信息"
+                              style={{ color: expandedGlbInfo[tileset.id] ? '#1890ff' : undefined }}
+                            />
+                          )
+                        ].filter(Boolean)}
+                      >
+                        <List.Item.Meta
+                          title={<Text strong style={{ fontSize: '13px' }}>{tileset.name}</Text>}
+                          description={
+                            <Text type="secondary" style={{ fontSize: '11px' }}>
+                              {tileset.fileCount} {t('files')} ({formatBytes(tileset.totalSize || 0)})
+                            </Text>
+                          }
+                        />
+                      </List.Item>
+                      
+                      {/* GLB信息面板 - 内联显示 */}
+                      {glbAnalysisData[tileset.id] && (
+                        <GLBInfoInline 
+                          glbData={glbAnalysisData[tileset.id]} 
+                          visible={expandedGlbInfo[tileset.id]}
+                        />
+                      )}
+                      
+                      {/* 添加底部间距 */}
+                      {expandedGlbInfo[tileset.id] && (
+                        <div style={{ marginBottom: '4px' }} />
+                      )}
+                    </div>
                   )}
                 />
               </div>
             )}
-            <Divider></Divider>
-            <Paragraph type="secondary" style={{ fontSize: '12px', marginBottom: '0px' }}>
-              <Text strong>{t('infoTitle')}</Text>
-              <br />
-              {t('infoDescription')}
-              <br />
-              <a href="https://www.ogc.org/standards/3DTiles/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px' }}>{t('learnMore')}</a>
-            </Paragraph>
+            
+            {/* 只有在没有上传文件时才显示3D Tiles信息 */}
+            {uploadedTilesets.length === 0 && (
+              <>
+                <Divider></Divider>
+                <Paragraph type="secondary" style={{ fontSize: '12px', marginBottom: '0px' }}>
+                  <Text strong>{t('infoTitle')}</Text>
+                  <br />
+                  {t('infoDescription')}
+                  <br />
+                  <a href="https://www.ogc.org/standards/3DTiles/" target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px' }}>{t('learnMore')}</a>
+                </Paragraph>
+              </>
+            )}
           </div>
         )}
       </Card>

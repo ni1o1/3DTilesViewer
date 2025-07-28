@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
+    "@gltf-transform/core": "^4.2.0",
+    "@gltf-transform/extensions": "^4.2.0",
     "antd": "^5.12.8",
     "cesium": "^1.111.0",
     "d3-scale-chromatic": "^3.1.0",
