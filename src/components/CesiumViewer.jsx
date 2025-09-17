@@ -36,6 +36,39 @@ function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShad
       // 移除Cesium Ion的信用信息显示
       viewer.current.cesiumWidget.creditContainer.style.display = 'none';
 
+      // 添加多个高强度光源让环境更亮
+      // 主光源 - 从右上方照射
+      viewer.current.scene.light = new Cesium.DirectionalLight({
+        direction: new Cesium.Cartesian3(0.5, 0.5, -1.0),
+        intensity: 20.0 // 更高强度的主光源
+      });
+      
+      // 启用全局光照
+      viewer.current.scene.globe.enableLighting = true;
+      
+      // 添加额外的光源来增强整体亮度
+      // 辅助光源1 - 从左侧照射
+      const auxiliaryLight1 = new Cesium.DirectionalLight({
+        direction: new Cesium.Cartesian3(-0.8, 0.2, -0.5),
+        intensity: 6.0
+      });
+      
+      // 辅助光源2 - 从后方照射
+      const auxiliaryLight2 = new Cesium.DirectionalLight({
+        direction: new Cesium.Cartesian3(0.0, -0.8, -0.6),
+        intensity: 5.0
+      });
+      
+      // 环境光源 - 提供整体基础亮度
+      const ambientLight = new Cesium.DirectionalLight({
+        direction: new Cesium.Cartesian3(0.0, 0.0, -1.0),
+        intensity: 4.0
+      });
+      
+      // 设置场景的整体亮度增强
+      viewer.current.scene.globe.atmosphereBrightnessShift = 0.3;
+      viewer.current.scene.globe.atmosphereSaturationShift = 0.1;
+
       // 设置初始视角
       viewer.current.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(114.1794890659453, 22.301170000048663, 8000000), 
@@ -45,7 +78,7 @@ function CesiumViewer({ currentTime, onTimeChange, shadowsEnabled = true, onShad
           roll: 0.0
         }
       });
-      
+
 
       
       // 如果传入了初始时间，设置时钟
